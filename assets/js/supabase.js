@@ -190,161 +190,17 @@ function getMockDB() {
       { id: "unt-201", code: "NUR-201", name: "Fundamentals of Nursing Practice", course_id: "crs-002", semester: "Semester 1", hours: 75 },
       { id: "unt-202", code: "MAT-202", name: "Maternal & Child Health Nursing", course_id: "crs-002", semester: "Semester 2", hours: 60 }
     ],
-    invoices: [
-      {
-        id: "inv-001",
-        invoice_no: "INV-2026-001",
-        student_id: "std-001",
-        student_name: "Jane Wambui Njeri",
-        amount: 65000,
-        paid_amount: 45000,
-        balance: 20000,
-        due_date: "2026-03-31",
-        description: "Semester 1 Tuition & Medical Lab Fees",
-        status: "partially_paid"
-      },
-      {
-        id: "inv-002",
-        invoice_no: "INV-2026-002",
-        student_id: "std-002",
-        student_name: "David Ochieng Otieno",
-        amount: 60000,
-        paid_amount: 60000,
-        balance: 0,
-        due_date: "2026-03-31",
-        description: "Semester 1 Nursing Tuition Fee",
-        status: "paid"
-      },
-      {
-        id: "inv-003",
-        invoice_no: "INV-2026-003",
-        student_id: "std-003",
-        student_name: "Aminah Hassan Omar",
-        amount: 62000,
-        paid_amount: 20000,
-        balance: 42000,
-        due_date: "2026-03-31",
-        description: "Semester 1 Lab Tech Tuition Fee",
-        status: "partially_paid"
-      }
-    ],
-    payments: [
-      {
-        id: "pay-001",
-        receipt_no: "RCP-2026-901",
-        student_id: "std-001",
-        student_name: "Jane Wambui Njeri",
-        amount_paid: 45000,
-        payment_method: "mpesa",
-        reference_code: "QJK9128X01",
-        payment_date: "2026-01-15",
-        received_by: "Accounts Office",
-        notes: "First installment via M-Pesa"
-      },
-      {
-        id: "pay-002",
-        receipt_no: "RCP-2026-902",
-        student_id: "std-002",
-        student_name: "David Ochieng Otieno",
-        amount_paid: 60000,
-        payment_method: "bank",
-        reference_code: "KCB-8819203",
-        payment_date: "2026-01-14",
-        received_by: "Accounts Office",
-        notes: "Full payment via KCB Bank Deposit"
-      }
-    ],
-    clinical: [
-      {
-        id: "cln-001",
-        student_id: "std-001",
-        student_name: "Jane Wambui Njeri",
-        hospital_name: "Mercylite Hospital",
-        department: "Emergency & Casualty",
-        supervisor_name: "Dr. Evans Mburu (Consultant Physician)",
-        supervisor_phone: "+254 720 112 233",
-        start_date: "2026-02-01",
-        end_date: "2026-05-31",
-        required_hours: 300,
-        completed_hours: 145,
-        status: "in_progress",
-        assessment_score: 84,
-        logbook_summary: "Demonstrated excellent skills in triage, IV line insertion, and patient history taking."
-      },
-      {
-        id: "cln-002",
-        student_id: "std-002",
-        student_name: "David Ochieng Otieno",
-        hospital_name: "Mercylite Hospital",
-        department: "Surgical Ward & Theatre",
-        supervisor_name: "Sister Grace Wanjiku (Senior Nursing Officer)",
-        supervisor_phone: "+254 722 445 566",
-        start_date: "2026-02-01",
-        end_date: "2026-05-31",
-        required_hours: 300,
-        completed_hours: 180,
-        status: "in_progress",
-        assessment_score: 88,
-        logbook_summary: "Active participation in pre-op prep, sterile field setup, and post-op vitals monitoring."
-      }
-    ],
-    results: [
-      {
-        id: "res-001",
-        student_id: "std-001",
-        student_name: "Jane Wambui Njeri",
-        unit_code: "ANA-101",
-        unit_name: "Human Anatomy & Histology I",
-        cat_marks: 24,
-        exam_marks: 56,
-        total_marks: 80,
-        grade: "A",
-        remarks: "Distinction",
-        semester: "Semester 1"
-      },
-      {
-        id: "res-002",
-        student_id: "std-001",
-        student_name: "Jane Wambui Njeri",
-        unit_code: "PHY-102",
-        unit_name: "Medical Physiology",
-        cat_marks: 21,
-        exam_marks: 48,
-        total_marks: 69,
-        grade: "B",
-        remarks: "Credit",
-        semester: "Semester 1"
-      }
-    ],
-    attendance: [
-      { id: "att-001", student_id: "std-001", student_name: "Jane Wambui Njeri", unit_code: "ANA-101", date: "2026-07-28", status: "present" },
-      { id: "att-002", student_id: "std-002", student_name: "David Ochieng Otieno", unit_code: "NUR-201", date: "2026-07-28", status: "present" },
-      { id: "att-003", student_id: "std-003", student_name: "Aminah Hassan Omar", unit_code: "MLT-501", date: "2026-07-28", status: "late" }
-    ],
-    books: [
-      { id: "bk-001", title: "Davidson's Principles and Practice of Medicine", author: "Ian Penman", category: "Clinical Medicine", quantity: 15, available: 12 },
-      { id: "bk-002", title: "Brunner & Suddarth Textbook of Medical-Surgical Nursing", author: "Janice Hinkle", category: "Nursing", quantity: 12, available: 9 },
-      { id: "bk-003", title: "Ross & Wilson Anatomy and Physiology", author: "Anne Waugh", category: "Anatomy", quantity: 25, available: 20 }
-    ],
-    borrows: [
-      { id: "br-001", book_id: "bk-001", book_title: "Davidson's Principles and Practice of Medicine", student_name: "Jane Wambui Njeri", borrow_date: "2026-07-10", due_date: "2026-08-10", status: "borrowed" }
-    ],
-    announcements: [
-      { id: "anc-001", title: "Semester 1 Clinical Rotations Commencement", content: "All Year 1 Clinical Medicine and Nursing students are instructed to report to Mercylite Hospital Main Complex by 8:00 AM on Monday.", category: "Clinical", date: "2026-07-25", author: "Principal" },
-      { id: "anc-002", title: "Fee Payment Deadline Notice", content: "Please ensure all outstanding fee balances for Semester 1 are cleared before mid-term examination week.", category: "Finance", date: "2026-07-20", author: "Finance Office" }
-    ],
-    assignments: [
-      { id: "asg-001", unit_code: "ANA-101", title: "Cardiovascular System Histology Report", deadline: "2026-08-05", max_marks: 30, description: "Detailed summary of cardiac muscle histology and coronary blood supply." }
-    ],
-    staff: [
-      { id: "stf-001", staff_no: "MTC/ST/001", full_name: "Dr. Harrison Kamau", role: "administrator", department: "Administration", email: "h.kamau@mercylifecollege.ac.ke", phone: "+254 722 000 111", status: "active", qualification: "MBChB, MMed (Surgery)" },
-      { id: "stf-002", staff_no: "MTC/ST/002", full_name: "Prof. Catherine Muthoni", role: "principal", department: "Academic Affairs", email: "principal@mercylifecollege.ac.ke", phone: "+254 722 222 333", status: "active", qualification: "PhD Medical Education" },
-      { id: "stf-003", staff_no: "MTC/ST/003", full_name: "Dr. Evans Mburu", role: "lecturer", department: "Clinical Medicine", email: "e.mburu@mercylifecollege.ac.ke", phone: "+254 720 112 233", status: "active", qualification: "MBChB, Dip. Med Ed" }
-    ],
-    audit_logs: [
-      { id: "log-001", user_email: "h.kamau@mercylifecollege.ac.ke", action: "LOGIN", details: "Administrator logged into ERP portal", timestamp: "2026-07-30 08:14:00" },
-      { id: "log-002", user_email: "accounts@mercylifecollege.ac.ke", action: "RECORD_PAYMENT", details: "Recorded M-Pesa Payment RCP-2026-901 for KSh 45,000", timestamp: "2026-07-30 08:30:00" }
-    ]
+    invoices: [],
+    payments: [],
+    clinical: [],
+    results: [],
+    attendance: [],
+    books: [],
+    borrows: [],
+    announcements: [],
+    assignments: [],
+    staff: [],
+    audit_logs: []
   };
 
   localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(initialDB));
@@ -355,15 +211,13 @@ function saveMockDB(db) {
   localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(db));
 }
 
-// Data Abstraction Service (Tries Supabase Database first, falls back smoothly to Mock DB)
+// Data Abstraction Service
 export const dbService = {
   async getStudents() {
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase.from('students').select('*');
-        if (!error && Array.isArray(data)) {
-          return data;
-        }
+        if (!error && Array.isArray(data)) return data;
         if (error) console.warn("Supabase Fetch Students Error:", error.message);
       } catch (e) {
         console.warn("Supabase network error, fallback to local storage:", e);
@@ -380,71 +234,6 @@ export const dbService = {
       status: "active",
       ...studentData
     };
-
-   async updateStudent(studentId, studentData) {
-  if (isSupabaseConfigured()) {
-    try {
-      const studentKeys = [
-        'admission_no', 'full_name', 'gender', 'dob', 'national_id',
-        'phone', 'email', 'guardian_name', 'guardian_phone', 'emergency_contact',
-        'address', 'county', 'nationality', 'religion', 'medical_conditions',
-        'course_id', 'current_semester', 'academic_year_id', 'intake_id',
-        'status', 'passport_photo_url', 'kcse_grade'
-      ];
-
-      const supabasePayload = cleanPayload(studentData, studentKeys);
-
-      if (supabasePayload.course_id && !isUUID(supabasePayload.course_id)) {
-        delete supabasePayload.course_id;
-      }
-
-      const { data, error } = await supabase
-        .from('students')
-        .update(supabasePayload)
-        .eq('id', studentId)
-        .select();
-
-      if (error) throw error;
-
-      console.log("✅ Student updated successfully:", data);
-
-      const db = getMockDB();
-      const index = db.students.findIndex(s => s.id === studentId);
-      if (index !== -1) {
-        db.students[index] = {
-          ...db.students[index],
-          ...studentData
-        };
-        saveMockDB(db);
-      }
-
-      return data?.[0];
-    } catch (e) {
-      console.error("❌ Supabase update failed:", e);
-
-      if (typeof window !== 'undefined' && window.showToast) {
-        window.showToast(`Update failed: ${e.message}`, 'error');
-      }
-
-      throw e;
-    }
-  }
-
-  const db = getMockDB();
-  const index = db.students.findIndex(s => s.id === studentId);
-
-  if (index !== -1) {
-    db.students[index] = {
-      ...db.students[index],
-      ...studentData
-    };
-
-    saveMockDB(db);
-    return db.students[index];
-  }
-
-  return null;
-}, 
 
     if (isSupabaseConfigured()) {
       try {
@@ -463,11 +252,7 @@ export const dbService = {
         const { data, error } = await supabase.from('students').insert([supabasePayload]).select();
         if (error) {
           console.error("❌ Supabase Insert Student Failed:", error.message, error);
-          if (typeof window !== 'undefined' && window.showToast) {
-            window.showToast(`Supabase Error: ${error.message}`, 'warning');
-          }
         } else if (data && data[0]) {
-          console.log("✅ Student inserted to Supabase successfully:", data[0]);
           newStudent.id = data[0].id;
         }
       } catch (e) {
@@ -486,7 +271,9 @@ export const dbService = {
       try {
         const { data, error } = await supabase.from('courses').select('*');
         if (!error && Array.isArray(data)) return data;
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Supabase fetch courses failed:", e);
+      }
     }
     return getMockDB().courses;
   },
@@ -500,15 +287,11 @@ export const dbService = {
         const supabasePayload = cleanPayload(newCourse, courseKeys);
 
         const { data, error } = await supabase.from('courses').insert([supabasePayload]).select();
-        if (error) {
-          console.error("❌ Supabase Course Insert Error:", error.message);
-          if (typeof window !== 'undefined' && window.showToast) {
-            window.showToast(`Supabase Error: ${error.message}`, 'warning');
-          }
-        } else if (data && data[0]) {
-          newCourse.id = data[0].id;
-        }
-      } catch (e) {}
+        if (error) console.error("❌ Supabase Course Insert Error:", error.message);
+        else if (data && data[0]) newCourse.id = data[0].id;
+      } catch (e) {
+        console.error("Supabase insert course exception:", e);
+      }
     }
 
     const db = getMockDB();
@@ -522,7 +305,9 @@ export const dbService = {
       try {
         const { data, error } = await supabase.from('fee_invoices').select('*');
         if (!error && Array.isArray(data)) return data;
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Supabase fetch invoices failed:", e);
+      }
     }
     return getMockDB().invoices;
   },
@@ -535,14 +320,14 @@ export const dbService = {
       try {
         const invoiceKeys = ['invoice_no', 'student_id', 'amount', 'paid_amount', 'balance', 'due_date', 'description', 'status'];
         const supabasePayload = cleanPayload(newInv, invoiceKeys);
-        if (supabasePayload.student_id && !isUUID(supabasePayload.student_id)) {
-          delete supabasePayload.student_id;
-        }
+        if (supabasePayload.student_id && !isUUID(supabasePayload.student_id)) delete supabasePayload.student_id;
 
         const { data, error } = await supabase.from('fee_invoices').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Invoice Insert Error:", error.message);
         else if (data && data[0]) newInv.id = data[0].id;
-      } catch (e) {}
+      } catch (e) {
+        console.error("Supabase invoice exception:", e);
+      }
     }
 
     db.invoices.unshift(newInv);
@@ -555,7 +340,9 @@ export const dbService = {
       try {
         const { data, error } = await supabase.from('fee_payments').select('*');
         if (!error && Array.isArray(data)) return data;
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Supabase fetch payments failed:", e);
+      }
     }
     return getMockDB().payments;
   },
@@ -578,7 +365,6 @@ export const dbService = {
         if (supabasePayload.student_id && !isUUID(supabasePayload.student_id)) delete supabasePayload.student_id;
         if (supabasePayload.invoice_id && !isUUID(supabasePayload.invoice_id)) delete supabasePayload.invoice_id;
 
-        // Normalize payment_method enum
         const pm = String(supabasePayload.payment_method || '').toLowerCase();
         if (pm.includes('mpesa') || pm.includes('m-pesa')) supabasePayload.payment_method = 'mpesa';
         else if (pm.includes('bank')) supabasePayload.payment_method = 'bank';
@@ -588,24 +374,32 @@ export const dbService = {
         const { data, error } = await supabase.from('fee_payments').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Payment Insert Error:", error.message);
         else if (data && data[0]) newPayment.id = data[0].id;
-      } catch (e) {}
+      } catch (e) {
+        console.error("Supabase payment exception:", e);
+      }
     }
 
     db.payments.unshift(newPayment);
 
-    // Update invoice balance
     const invoice = db.invoices.find(i => i.id === paymentData.invoice_id || i.student_id === paymentData.student_id);
     if (invoice) {
       invoice.paid_amount = Number(invoice.paid_amount) + Number(paymentData.amount_paid);
       invoice.balance = Math.max(0, Number(invoice.amount) - Number(invoice.paid_amount));
-      if (invoice.balance === 0) invoice.status = 'paid';
-      else invoice.status = 'partially_paid';
+      invoice.status = invoice.balance === 0 ? 'paid' : 'partially_paid';
     }
     saveMockDB(db);
     return newPayment;
   },
 
   async getClinicalAttachments() {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.from('clinical_attachments').select('*');
+        if (!error && Array.isArray(data)) return data;
+      } catch (e) {
+        console.warn("Supabase fetch clinical attachments failed:", e);
+      }
+    }
     return getMockDB().clinical;
   },
 
@@ -614,7 +408,9 @@ export const dbService = {
       try {
         const { data, error } = await supabase.from('exam_results').select('*');
         if (!error && Array.isArray(data)) return data;
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Supabase fetch exam results failed:", e);
+      }
     }
     return getMockDB().results;
   },
@@ -632,7 +428,9 @@ export const dbService = {
         const { data, error } = await supabase.from('exam_results').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Exam Result Insert Error:", error.message);
         else if (data && data[0]) newRes.id = data[0].id;
-      } catch (e) {}
+      } catch (e) {
+        console.error("Supabase exam result exception:", e);
+      }
     }
     db.results.unshift(newRes);
     saveMockDB(db);
@@ -640,10 +438,37 @@ export const dbService = {
   },
 
   async getAttendance() {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.from('attendance').select('*');
+        if (!error && Array.isArray(data)) return data;
+      } catch (e) {
+        console.warn("Supabase fetch attendance failed:", e);
+      }
+    }
     return getMockDB().attendance;
   },
 
   async markAttendance(records) {
+    if (!Array.isArray(records) || records.length === 0) return [];
+
+    if (isSupabaseConfigured()) {
+      try {
+        const attendanceKeys = ['student_id', 'unit_code', 'date', 'status', 'remarks'];
+        const cleanedRecords = records.map(r => {
+          const payload = cleanPayload(r, attendanceKeys);
+          if (payload.student_id && !isUUID(payload.student_id)) delete payload.student_id;
+          return payload;
+        });
+
+        const { data, error } = await supabase.from('attendance').insert(cleanedRecords).select();
+        if (error) console.error("❌ Supabase Attendance Insert Error:", error.message);
+        else if (data) console.log("✅ Attendance synced to Supabase:", data);
+      } catch (e) {
+        console.error("Supabase mark attendance exception:", e);
+      }
+    }
+
     const db = getMockDB();
     db.attendance = [...records, ...db.attendance];
     saveMockDB(db);
@@ -651,6 +476,14 @@ export const dbService = {
   },
 
   async getBooks() {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.from('library_books').select('*');
+        if (!error && Array.isArray(data)) return data;
+      } catch (e) {
+        console.warn("Supabase fetch books failed:", e);
+      }
+    }
     return getMockDB().books;
   },
 
@@ -659,7 +492,9 @@ export const dbService = {
       try {
         const { data, error } = await supabase.from('announcements').select('*');
         if (!error && Array.isArray(data) && data.length > 0) return data;
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Supabase fetch announcements failed:", e);
+      }
     }
     return getMockDB().announcements;
   },
@@ -679,7 +514,9 @@ export const dbService = {
         const { data, error } = await supabase.from('announcements').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Announcement Insert Error:", error.message);
         else if (data && data[0]) newAnc.id = data[0].id;
-      } catch (e) {}
+      } catch (e) {
+        console.error("Supabase announcement exception:", e);
+      }
     }
     db.announcements.unshift(newAnc);
     saveMockDB(db);
@@ -687,18 +524,40 @@ export const dbService = {
   },
 
   async getAuditLogs() {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.from('audit_logs').select('*');
+        if (!error && Array.isArray(data)) return data;
+      } catch (e) {
+        console.warn("Supabase fetch audit logs failed:", e);
+      }
+    }
     return getMockDB().audit_logs;
   },
 
   async logAudit(action, details, userEmail = "system@mercylifecollege.ac.ke") {
     const db = getMockDB();
-    db.audit_logs.unshift({
+    const newLog = {
       id: "log-" + Date.now(),
       user_email: userEmail,
       action,
       details,
       timestamp: new Date().toLocaleString()
-    });
+    };
+
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from('audit_logs').insert([{
+          user_email: userEmail,
+          action,
+          details
+        }]);
+      } catch (e) {
+        console.warn("Supabase logAudit exception:", e);
+      }
+    }
+
+    db.audit_logs.unshift(newLog);
     saveMockDB(db);
   }
 };
