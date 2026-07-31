@@ -4,30 +4,49 @@
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseCredentials, isSupabaseConfigured } from './config.js';
 
-// Dynamic Supabase Client getter so updated credentials in Settings immediately take effect
+// Singleton client cache to prevent memory leaks and duplicate instances
+let cachedClient = null;
+let lastUrl = null;
+let lastKey = null;
+
 export function getSupabaseClient() {
   const { url, anonKey } = getSupabaseCredentials();
-  return createClient(url, anonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true
-    }
-  });
+
+  if (!url || !anonKey) return null;
+
+  // Only re-instantiate if credentials changed in Settings
+  if (!cachedClient || url !== lastUrl || anonKey !== lastKey) {
+    lastUrl = url;
+    lastKey = anonKey;
+    cachedClient = createClient(url, anonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
+  }
+  return cachedClient;
 }
 
 export const supabase = new Proxy({}, {
   get(target, prop) {
     const client = getSupabaseClient();
+    if (!client) return undefined;
     const val = client[prop];
     return typeof val === 'function' ? val.bind(client) : val;
   }
 });
 
-// Helper to check valid UUIDs (Postgres columns)
-function isUUID(str) {
+/**
+ * Validates Postgres UUID syntax.
+ */
+export function isUUID(str) {
   return typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 }
 
+/**
+ * Sanitizes object keys for Supabase insertion, turning empty strings to null.
+ */
 function cleanPayload(data, validKeys) {
   const cleaned = {};
   for (const key of validKeys) {
@@ -42,7 +61,7 @@ function cleanPayload(data, validKeys) {
   return cleaned;
 }
 
-// Mock Local Storage Database State for Fallback / Immediate Demo Evaluation
+// Local Storage Fallback Key
 const MOCK_STORAGE_KEY = 'mercylife_mock_db_v1';
 
 function getMockDB() {
@@ -51,10 +70,10 @@ function getMockDB() {
     try {
       return JSON.parse(data);
     } catch (e) {
-      console.error("Error parsing mock DB", e);
+      console.error("Error parsing mock DB:", e);
     }
   }
-  
+
   // Seed Initial Mock Database for Mercylife Training College
   const initialDB = {
     students: [
@@ -211,12 +230,13 @@ function saveMockDB(db) {
   localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(db));
 }
 
-// Data Abstraction Service
+// Data Abstraction Layer
 export const dbService = {
+  // --- STUDENTS ---
   async getStudents() {
     if (isSupabaseConfigured()) {
       try {
-        const { data, error } = await supabase.from('students').select('*');
+        const { data, error } = await supabase.from('students').select('*').order('created_at', { ascending: false });
         if (!error && Array.isArray(data)) return data;
         if (error) console.warn("Supabase Fetch Students Error:", error.message);
       } catch (e) {
@@ -227,7 +247,7 @@ export const dbService = {
   },
 
   async addStudent(studentData) {
-    const newStudent = {
+    let newStudent = {
       id: "std-" + Date.now(),
       admission_no: studentData.admission_no || `MTC/2026/0${Math.floor(100 + Math.random() * 900)}`,
       created_at: new Date().toISOString().split('T')[0],
@@ -245,15 +265,16 @@ export const dbService = {
           'status', 'passport_photo_url', 'kcse_grade'
         ];
         const supabasePayload = cleanPayload(newStudent, studentKeys);
+
         if (supabasePayload.course_id && !isUUID(supabasePayload.course_id)) {
           delete supabasePayload.course_id;
         }
 
         const { data, error } = await supabase.from('students').insert([supabasePayload]).select();
         if (error) {
-          console.error("❌ Supabase Insert Student Failed:", error.message, error);
+          console.error("❌ Supabase Insert Student Failed:", error.message);
         } else if (data && data[0]) {
-          newStudent.id = data[0].id;
+          newStudent = { ...newStudent, ...data[0] };
         }
       } catch (e) {
         console.error("Supabase insert exception:", e);
@@ -266,10 +287,11 @@ export const dbService = {
     return newStudent;
   },
 
+  // --- COURSES ---
   async getCourses() {
     if (isSupabaseConfigured()) {
       try {
-        const { data, error } = await supabase.from('courses').select('*');
+        const { data, error } = await supabase.from('courses').select('*').order('code', { ascending: true });
         if (!error && Array.isArray(data)) return data;
       } catch (e) {
         console.warn("Supabase fetch courses failed:", e);
@@ -279,7 +301,7 @@ export const dbService = {
   },
 
   async addCourse(courseData) {
-    const newCourse = { id: "crs-" + Date.now(), ...courseData };
+    let newCourse = { id: "crs-" + Date.now(), ...courseData };
 
     if (isSupabaseConfigured()) {
       try {
@@ -288,7 +310,7 @@ export const dbService = {
 
         const { data, error } = await supabase.from('courses').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Course Insert Error:", error.message);
-        else if (data && data[0]) newCourse.id = data[0].id;
+        else if (data && data[0]) newCourse = { ...newCourse, ...data[0] };
       } catch (e) {
         console.error("Supabase insert course exception:", e);
       }
@@ -300,6 +322,7 @@ export const dbService = {
     return newCourse;
   },
 
+  // --- INVOICES ---
   async getInvoices() {
     if (isSupabaseConfigured()) {
       try {
@@ -314,7 +337,7 @@ export const dbService = {
 
   async addInvoice(invoiceData) {
     const db = getMockDB();
-    const newInv = { id: "inv-" + Date.now(), invoice_no: `INV-2026-00${db.invoices.length + 1}`, ...invoiceData };
+    let newInv = { id: "inv-" + Date.now(), invoice_no: `INV-2026-00${db.invoices.length + 1}`, ...invoiceData };
 
     if (isSupabaseConfigured()) {
       try {
@@ -324,7 +347,7 @@ export const dbService = {
 
         const { data, error } = await supabase.from('fee_invoices').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Invoice Insert Error:", error.message);
-        else if (data && data[0]) newInv.id = data[0].id;
+        else if (data && data[0]) newInv = { ...newInv, ...data[0] };
       } catch (e) {
         console.error("Supabase invoice exception:", e);
       }
@@ -335,6 +358,7 @@ export const dbService = {
     return newInv;
   },
 
+  // --- PAYMENTS ---
   async getPayments() {
     if (isSupabaseConfigured()) {
       try {
@@ -349,7 +373,7 @@ export const dbService = {
 
   async recordPayment(paymentData) {
     const db = getMockDB();
-    const newPayment = {
+    let newPayment = {
       id: "pay-" + Date.now(),
       receipt_no: `RCP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       payment_date: new Date().toISOString().split('T')[0],
@@ -357,23 +381,23 @@ export const dbService = {
       ...paymentData
     };
 
+    const pm = String(paymentData.payment_method || '').toLowerCase();
+    let sanitizedMethod = 'cash';
+    if (pm.includes('mpesa') || pm.includes('m-pesa')) sanitizedMethod = 'mpesa';
+    else if (pm.includes('bank')) sanitizedMethod = 'bank';
+    else if (pm.includes('cheque')) sanitizedMethod = 'cheque';
+
     if (isSupabaseConfigured()) {
       try {
         const paymentKeys = ['receipt_no', 'invoice_id', 'student_id', 'amount_paid', 'payment_method', 'reference_code', 'payment_date', 'received_by', 'notes'];
-        const supabasePayload = cleanPayload(newPayment, paymentKeys);
+        const supabasePayload = cleanPayload({ ...newPayment, payment_method: sanitizedMethod }, paymentKeys);
 
         if (supabasePayload.student_id && !isUUID(supabasePayload.student_id)) delete supabasePayload.student_id;
         if (supabasePayload.invoice_id && !isUUID(supabasePayload.invoice_id)) delete supabasePayload.invoice_id;
 
-        const pm = String(supabasePayload.payment_method || '').toLowerCase();
-        if (pm.includes('mpesa') || pm.includes('m-pesa')) supabasePayload.payment_method = 'mpesa';
-        else if (pm.includes('bank')) supabasePayload.payment_method = 'bank';
-        else if (pm.includes('cheque')) supabasePayload.payment_method = 'cheque';
-        else supabasePayload.payment_method = 'cash';
-
         const { data, error } = await supabase.from('fee_payments').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Payment Insert Error:", error.message);
-        else if (data && data[0]) newPayment.id = data[0].id;
+        else if (data && data[0]) newPayment = { ...newPayment, ...data[0] };
       } catch (e) {
         console.error("Supabase payment exception:", e);
       }
@@ -381,16 +405,34 @@ export const dbService = {
 
     db.payments.unshift(newPayment);
 
+    // Update locally stored invoice status & balance
     const invoice = db.invoices.find(i => i.id === paymentData.invoice_id || i.student_id === paymentData.student_id);
     if (invoice) {
-      invoice.paid_amount = Number(invoice.paid_amount) + Number(paymentData.amount_paid);
-      invoice.balance = Math.max(0, Number(invoice.amount) - Number(invoice.paid_amount));
-      invoice.status = invoice.balance === 0 ? 'paid' : 'partially_paid';
+      const newPaidAmount = Number(invoice.paid_amount || 0) + Number(paymentData.amount_paid);
+      const newBalance = Math.max(0, Number(invoice.amount) - newPaidAmount);
+      const newStatus = newBalance === 0 ? 'paid' : 'partially_paid';
+
+      invoice.paid_amount = newPaidAmount;
+      invoice.balance = newBalance;
+      invoice.status = newStatus;
+
+      // Sync updated invoice status to Supabase if configured & valid UUID
+      if (isSupabaseConfigured() && isUUID(invoice.id)) {
+        supabase.from('fee_invoices').update({
+          paid_amount: newPaidAmount,
+          balance: newBalance,
+          status: newStatus
+        }).eq('id', invoice.id).then(({ error }) => {
+          if (error) console.error("❌ Failed to sync invoice update to Supabase:", error.message);
+        });
+      }
     }
+
     saveMockDB(db);
     return newPayment;
   },
 
+  // --- CLINICAL ATTACHMENTS ---
   async getClinicalAttachments() {
     if (isSupabaseConfigured()) {
       try {
@@ -403,6 +445,7 @@ export const dbService = {
     return getMockDB().clinical;
   },
 
+  // --- EXAM RESULTS ---
   async getExamResults() {
     if (isSupabaseConfigured()) {
       try {
@@ -417,7 +460,7 @@ export const dbService = {
 
   async addExamResult(resultData) {
     const db = getMockDB();
-    const newRes = { id: "res-" + Date.now(), ...resultData };
+    let newRes = { id: "res-" + Date.now(), ...resultData };
     if (isSupabaseConfigured()) {
       try {
         const resultKeys = ['exam_id', 'student_id', 'marks_obtained', 'grade', 'remarks', 'is_published'];
@@ -427,7 +470,7 @@ export const dbService = {
 
         const { data, error } = await supabase.from('exam_results').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Exam Result Insert Error:", error.message);
-        else if (data && data[0]) newRes.id = data[0].id;
+        else if (data && data[0]) newRes = { ...newRes, ...data[0] };
       } catch (e) {
         console.error("Supabase exam result exception:", e);
       }
@@ -437,6 +480,7 @@ export const dbService = {
     return newRes;
   },
 
+  // --- ATTENDANCE ---
   async getAttendance() {
     if (isSupabaseConfigured()) {
       try {
@@ -475,6 +519,7 @@ export const dbService = {
     return records;
   },
 
+  // --- LIBRARY BOOKS ---
   async getBooks() {
     if (isSupabaseConfigured()) {
       try {
@@ -487,6 +532,7 @@ export const dbService = {
     return getMockDB().books;
   },
 
+  // --- ANNOUNCEMENTS ---
   async getAnnouncements() {
     if (isSupabaseConfigured()) {
       try {
@@ -501,7 +547,7 @@ export const dbService = {
 
   async addAnnouncement(announcementData) {
     const db = getMockDB();
-    const newAnc = {
+    let newAnc = {
       id: "anc-" + Date.now(),
       date: new Date().toISOString().split('T')[0],
       ...announcementData
@@ -513,7 +559,7 @@ export const dbService = {
 
         const { data, error } = await supabase.from('announcements').insert([supabasePayload]).select();
         if (error) console.error("❌ Supabase Announcement Insert Error:", error.message);
-        else if (data && data[0]) newAnc.id = data[0].id;
+        else if (data && data[0]) newAnc = { ...newAnc, ...data[0] };
       } catch (e) {
         console.error("Supabase announcement exception:", e);
       }
@@ -523,6 +569,7 @@ export const dbService = {
     return newAnc;
   },
 
+  // --- AUDIT LOGS ---
   async getAuditLogs() {
     if (isSupabaseConfigured()) {
       try {
