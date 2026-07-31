@@ -12,8 +12,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   enforcePageAccess();
   renderSidebar('dashboard');
   
-  const user = getCurrentUser();
-  renderNavbar(`Welcome back, ${user.full_name.split(' ')[0]}!`);
+  const user = getCurrentUser() || {};
+  const firstName = user.full_name ? user.full_name.split(' ')[0] : (user.username || 'User');
+  renderNavbar(`Welcome back, ${firstName}!`);
 
   await loadDashboardData();
 });
@@ -22,18 +23,58 @@ async function loadDashboardData() {
   const container = document.getElementById('dashboard-content');
   if (!container) return;
 
-  const [students, courses, invoices, payments, clinicals, announcements] = await Promise.all([
-    dbService.getStudents(),
-    dbService.getCourses(),
-    dbService.getInvoices(),
-    dbService.getPayments(),
-    dbService.getClinicalAttachments(),
-    dbService.getAnnouncements()
-  ]);
+  // Safe loading wrappers to prevent a single failing fetch from breaking the entire page
+  let students = [], courses = [], invoices = [], payments = [], clinicals = [], announcements = [];
 
-  const totalRevenue = payments.reduce((sum, p) => sum + Number(p.amount_paid), 0);
-  const totalBalance = invoices.reduce((sum, i) => sum + Number(i.balance), 0);
-  const defaultersCount = invoices.filter(i => Number(i.balance) > 0).length;
+  try {
+    const results = await Promise.allSettled([
+      dbService.getStudents(),
+      dbService.getCourses(),
+      dbService.getInvoices(),
+      dbService.getPayments(),
+      dbService.getClinicalAttachments(),
+      dbService.getAnnouncements()
+    ]);
+
+    students = results[0].status === 'fulfilled' && Array.isArray(results[0].value) ? results[0].value : [];
+    courses = results[1].status === 'fulfilled' && Array.isArray(results[1].value) ? results[1].value : [];
+    invoices = results[2].status === 'fulfilled' && Array.isArray(results[2].value) ? results[2].value : [];
+    payments = results[3].status === 'fulfilled' && Array.isArray(results[3].value) ? results[3].value : [];
+    clinicals = results[4].status === 'fulfilled' && Array.isArray(results[4].value) ? results[4].value : [];
+    announcements = results[5].status === 'fulfilled' && Array.isArray(results[5].value) ? results[5].value : [];
+  } catch (error) {
+    console.error("Dashboard data fetching error:", error);
+    showToast("Error loading some dashboard statistics", "warning");
+  }
+
+  const totalRevenue = payments.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
+  const totalBalance = invoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
+  const defaultersCount = invoices.filter(i => (Number(i.balance) || 0) > 0).length;
+
+  // Calculate dynamic enrollment breakdown by course
+  const totalStudents = students.length;
+  const courseCounts = {};
+  students.forEach(s => {
+    const cName = s.course_name || 'Other / General';
+    courseCounts[cName] = (courseCounts[cName] || 0) + 1;
+  });
+
+  const enrollmentBreakdownHTML = totalStudents > 0 
+    ? Object.entries(courseCounts).map(([courseName, count]) => {
+        const pct = Math.round((count / totalStudents) * 100);
+        return `
+          <div>
+            <div style="display:flex; justify-space-between; font-size:0.8rem; font-weight:600;">
+              <span>${courseName}</span>
+              <span>${pct}% (${count})</span>
+            </div>
+            <div style="height:8px; background:var(--border-color, #e2e8f0); border-radius:4px; overflow:hidden; margin-top:4px;">
+              <div style="width:${pct}%; height:100%; background:var(--color-primary, #059669);"></div>
+            </div>
+          </div>
+        `;
+      }).join('')
+    : `<div style="font-size:0.85rem; color:var(--text-muted);">No active student enrollment data available.</div>`;
 
   container.innerHTML = `
     <!-- Top Metrics Cards -->
@@ -84,7 +125,7 @@ async function loadDashboardData() {
       <div class="card-header" style="border:none; margin:0; padding-bottom:0.5rem;">
         <h3 class="card-title">⚡ Quick ERP Actions</h3>
       </div>
-      <div class="quick-actions-bar" style="padding-top:0.5rem;">
+      <div class="quick-actions-bar" style="padding-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
         <a href="students.html?action=new" class="btn btn-primary">➕ Admit New Student</a>
         <a href="finance.html?action=pay" class="btn btn-secondary">💳 Record Fee Receipt</a>
         <a href="results.html" class="btn btn-secondary">📝 Enter Exam Marks</a>
@@ -97,7 +138,7 @@ async function loadDashboardData() {
     <div class="dashboard-charts-grid">
       <!-- Left Column: Admissions & Timetable -->
       <div>
-        <div class="card">
+        <div class="card" style="margin-bottom:1.5rem;">
           <div class="card-header">
             <div>
               <h3 class="card-title">📋 Recent Admissions</h3>
@@ -117,20 +158,26 @@ async function loadDashboardData() {
                 </tr>
               </thead>
               <tbody>
-                ${students.slice(0, 5).map(s => `
+                ${students.length > 0 ? students.slice(0, 5).map(s => `
                   <tr>
-                    <td><strong>${s.admission_no}</strong></td>
+                    <td><strong>${s.admission_no || 'N/A'}</strong></td>
                     <td>
                       <div style="display:flex; align-items:center; gap:0.5rem;">
                         <img src="${s.passport_photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;" />
-                        <span>${s.full_name}</span>
+                        <span>${s.full_name || 'Unnamed Student'}</span>
                       </div>
                     </td>
-                    <td>${s.course_name}</td>
-                    <td>${s.county}</td>
-                    <td>${getStatusBadge(s.status)}</td>
+                    <td>${s.course_name || 'Unassigned'}</td>
+                    <td>${s.county || 'N/A'}</td>
+                    <td>${getStatusBadge(s.status || 'Active')}</td>
                   </tr>
-                `).join('')}
+                `).join('') : `
+                  <tr>
+                    <td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">
+                      No student enrollment records found.
+                    </td>
+                  </tr>
+                `}
               </tbody>
             </table>
           </div>
@@ -170,55 +217,33 @@ async function loadDashboardData() {
 
       <!-- Right Column: Announcements & Distribution -->
       <div>
-        <div class="card">
+        <div class="card" style="margin-bottom:1.5rem;">
           <div class="card-header">
             <h3 class="card-title">📢 Notice Board</h3>
             <a href="messaging.html" class="btn btn-sm btn-outline">All Notices</a>
           </div>
           <div style="display:flex; flex-direction:column; gap:1rem;">
-            ${announcements.slice(0, 3).map(a => `
+            ${announcements.length > 0 ? announcements.slice(0, 3).map(a => `
               <div style="padding:0.75rem; background:var(--bg-hover); border-radius:var(--radius-md); border-left:4px solid var(--color-primary);">
-                <div style="font-weight:700; font-size:0.9rem;">${a.title}</div>
-                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">${a.content}</div>
-                <div style="font-size:0.7rem; color:var(--color-primary); margin-top:0.4rem; font-weight:600;">📅 ${a.date} • ${a.author}</div>
+                <div style="font-weight:700; font-size:0.9rem;">${a.title || 'Untitled Notice'}</div>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">${a.content || ''}</div>
+                <div style="font-size:0.7rem; color:var(--color-primary); margin-top:0.4rem; font-weight:600;">📅 ${a.date || 'Today'} • ${a.author || 'Administration'}</div>
               </div>
-            `).join('')}
+            `).join('') : `
+              <div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.85rem;">
+                No active notices posted.
+              </div>
+            `}
           </div>
         </div>
 
-        <!-- Course Capacity Bar -->
+        <!-- Dynamic Course Capacity / Enrollment Breakdown -->
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">📊 Enrollment breakdown</h3>
+            <h3 class="card-title">📊 Enrollment Breakdown</h3>
           </div>
           <div style="display:flex; flex-direction:column; gap:0.85rem;">
-            <div>
-              <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
-                <span>Diploma Clinical Medicine</span>
-                <span>45%</span>
-              </div>
-              <div style="height:8px; background:var(--border-color); border-radius:4px; overflow:hidden; margin-top:4px;">
-                <div style="width:45%; height:100%; background:var(--color-primary);"></div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
-                <span>Diploma KRCHN Nursing</span>
-                <span>35%</span>
-              </div>
-              <div style="height:8px; background:var(--border-color); border-radius:4px; overflow:hidden; margin-top:4px;">
-                <div style="width:35%; height:100%; background:#15803D;"></div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
-                <span>Medical Lab Tech</span>
-                <span>20%</span>
-              </div>
-              <div style="height:8px; background:var(--border-color); border-radius:4px; overflow:hidden; margin-top:4px;">
-                <div style="width:20%; height:100%; background:#0369A1;"></div>
-              </div>
-            </div>
+            ${enrollmentBreakdownHTML}
           </div>
         </div>
       </div>
