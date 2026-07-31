@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP Portal Login | Mercylife Training College</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #064E3B 0%, #0F5132 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .login-box {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 480px;
+      padding: 2.25rem;
+    }
+    .login-brand-header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+    .login-logo {
+      width: 54px;
+      height: 54px;
+      background: #0F5132;
+      color: #FFFFFF;
+      border-radius: var(--radius-md);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .demo-role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .demo-role-btn {
+      padding: 0.5rem;
+      font-size: 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-hover);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+    .demo-role-btn:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-box">
+    <div class="login-brand-header">
+      <div class="login-logo">M</div>
+      <h2 style="font-size:1.4rem; font-weight:800; color:var(--text-main); margin:0;">MERCYLIFE COLLEGE ERP</h2>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">Owned by Mercylite Hospital • Supabase Integrated</p>
+    </div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label">Email Address *</label>
+        <input type="email" class="form-control" id="login-email" required value="admin@mercylifecollege.ac.ke" placeholder="user@mercylifecollege.ac.ke" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input type="password" class="form-control" id="login-password" required value="••••••••" />
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%; padding:0.75rem; font-size:1rem;">
+        🔑 Sign In to ERP Portal
+      </button>
+    </form>
+
+    <div id="demo-role-section" style="margin-top:1.75rem; border-top:1px solid var(--border-color); padding-top:1.25rem;">
+      <div style="font-size:0.8rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; text-align:center;">
+        ⚡ Instant 1-Click Role Switcher (Evaluation Mode)
+      </div>
+      <p style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-bottom:0.75rem;">
+        Select any role below to explore customized portal views:
+      </p>
+
+      <div class="demo-role-grid">
+        <button class="demo-role-btn" data-role="administrator">👑 Admin</button>
+        <button class="demo-role-btn" data-role="principal">🎓 Principal</button>
+        <button class="demo-role-btn" data-role="registrar">📋 Registrar</button>
+        <button class="demo-role-btn" data-role="finance_officer">💰 Finance Officer</button>
+        <button class="demo-role-btn" data-role="lecturer">👨‍🏫 Lecturer</button>
+        <button class="demo-role-btn" data-role="librarian">📚 Librarian</button>
+        <button class="demo-role-btn" data-role="reception">🏢 Reception</button>
+        <button class="demo-role-btn" data-role="student">👤 Student Portal</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DEMO_USERS, setCurrentUser, authenticateUser, isDemoUsersDisabled } from './assets/js/auth.js';
+    import { showToast } from './assets/js/components/toast.js';
+
+    // Hide demo roles if production mode enabled (demo users disabled)
+    if (isDemoUsersDisabled()) {
+      const section = document.getElementById('demo-role-section');
+      if (section) section.style.display = 'none';
+    }
+
+    document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const user = await authenticateUser(email, password);
+        setCurrentUser(user);
+        showToast(`Welcome back, ${user.full_name}! (${user.title || user.role})`, 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+      } catch (err) {
+        showToast(`Login failed: ${err.message}`, 'error');
+      }
+    });
+
+    document.querySelectorAll('.demo-role-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const roleKey = e.currentTarget.getAttribute('data-role');
+        if (DEMO_USERS[roleKey]) {
+          setCurrentUser(DEMO_USERS[roleKey]);
+          showToast(`Switched to ${DEMO_USERS[roleKey].title} (${roleKey})!`, 'info');
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
