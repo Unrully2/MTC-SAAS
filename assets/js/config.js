@@ -8,13 +8,17 @@ export const CONFIG = {
   MOTO: "Excellence in Medical Training & Healthcare Innovation",
   EMAIL: "info@mercylifecollege.ac.ke",
   PHONE: "+254 712 345 678",
-  LOCATION: "Mercylite Medical Complex, Kiambu Road, Kenya",
+  LOCATION: "Kiambu town opposite kiambu law courts in Mercylite hospital",
   WEBSITE: "https://mercylifecollege.ac.ke",
 
-  // Supabase Configuration Storage Keys
+  // Default Supabase Credentials
+  SUPABASE_DEFAULT_URL: "https://ineaufpwxuuvsvhomrtz.supabase.co",
+  SUPABASE_DEFAULT_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluZWF1ZnB3eHV1dnN2aG9tcnR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0OTAzOTIsImV4cCI6MjEwMTA2NjM5Mn0.efWy5IBaolgjWgWIBSKI3aPWx1KaCASlhUkneTgTpI0",
+
+  // Browser Storage Keys
   STORAGE_KEYS: {
-    SUPABASE_URL: "https://ineaufpwxuuvsvhomrtz.supabase.co",
-    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluZWF1ZnB3eHV1dnN2aG9tcnR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0OTAzOTIsImV4cCI6MjEwMTA2NjM5Mn0.efWy5IBaolgjWgWIBSKI3aPWx1KaCASlhUkneTgTpI0",
+    SUPABASE_URL: "mercylife_supabase_url",
+    SUPABASE_ANON_KEY: "mercylife_supabase_anon_key",
     CURRENT_USER: "mercylife_current_user",
     THEME_MODE: "mercylife_theme_mode",
     SCHOOL_INFO: "mercylife_school_info",
@@ -36,25 +40,24 @@ export const CONFIG = {
   ]
 };
 
-// Helper to get configured Supabase Credentials
+// Helper to get configured Supabase Credentials with correct storage key lookups
 export function getSupabaseCredentials() {
   const customUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SUPABASE_URL);
   const customKey = localStorage.getItem(CONFIG.STORAGE_KEYS.SUPABASE_ANON_KEY);
 
   return {
-    url: customUrl || "https://example-supabase-project.supabase.co",
-    anonKey: customKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example_anon_key"
+    url: customUrl || CONFIG.SUPABASE_DEFAULT_URL,
+    anonKey: customKey || CONFIG.SUPABASE_DEFAULT_ANON_KEY
   };
 }
 
 export function isSupabaseConfigured() {
-  const customUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SUPABASE_URL);
-  const customKey = localStorage.getItem(CONFIG.STORAGE_KEYS.SUPABASE_ANON_KEY);
+  const creds = getSupabaseCredentials();
   return Boolean(
-    customUrl && 
-    customKey && 
-    customUrl.startsWith('http') && 
-    !customUrl.includes('example-supabase-project')
+    creds.url && 
+    creds.anonKey && 
+    creds.url.startsWith('http') && 
+    !creds.url.includes('example-supabase-project')
   );
 }
 
@@ -95,4 +98,3 @@ export function getSchoolInfo() {
 export function saveSchoolInfo(info) {
   localStorage.setItem(CONFIG.STORAGE_KEYS.SCHOOL_INFO, JSON.stringify(info));
 }
-
