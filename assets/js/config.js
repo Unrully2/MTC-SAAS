@@ -13,8 +13,8 @@ export const CONFIG = {
 
   // Supabase Configuration Storage Keys
   STORAGE_KEYS: {
-    SUPABASE_URL: "mercylife_supabase_url",
-    SUPABASE_ANON_KEY: "mercylife_supabase_anon_key",
+    SUPABASE_URL: "https://ineaufpwxuuvsvhomrtz.supabase.co",
+    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluZWF1ZnB3eHV1dnN2aG9tcnR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0OTAzOTIsImV4cCI6MjEwMTA2NjM5Mn0.efWy5IBaolgjWgWIBSKI3aPWx1KaCASlhUkneTgTpI0",
     CURRENT_USER: "mercylife_current_user",
     THEME_MODE: "mercylife_theme_mode",
     SCHOOL_INFO: "mercylife_school_info",
