@@ -99,11 +99,11 @@ export function getAllSystemUsers() {
   return [...demoList, ...customList];
 }
 
-// Create a new user account (chief admin capability)
-export function createUserAccount(userData) {
+// Create a new user account (chief admin capability) with Supabase integration
+export async function createUserAccount(userData) {
   const customUsers = getCustomUsers();
   
-  // Check if email already exists
+  // Check if email already exists locally
   const allUsers = getAllSystemUsers();
   if (allUsers.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
     throw new Error(`User account with email '${userData.email}' already exists.`);
@@ -121,6 +121,29 @@ export function createUserAccount(userData) {
     created_at: new Date().toISOString(),
     is_demo: false
   };
+
+  // Register user in Supabase Auth if available
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: newUser.email,
+      password: newUser.password,
+      options: {
+        data: {
+          full_name: newUser.full_name,
+          role: newUser.role,
+          title: newUser.title
+        }
+      }
+    });
+
+    if (error) {
+      console.warn("Supabase Auth sign up warning:", error.message);
+    } else if (data?.user) {
+      newUser.id = data.user.id;
+    }
+  } catch (e) {
+    console.warn("Failed to create user in Supabase Auth, continuing locally:", e);
+  }
 
   customUsers.push(newUser);
   localStorage.setItem(CONFIG.STORAGE_KEYS.CUSTOM_USERS, JSON.stringify(customUsers));
@@ -165,13 +188,16 @@ export function deleteUserAccount(userId) {
 export async function authenticateUser(email, password) {
   const normalizedEmail = email.toLowerCase().trim();
 
-  // 1. Check if Supabase Auth is active and try signing in via Supabase
+  // 1. Try signing in via Supabase Auth
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password: password
     });
-    if (data?.user && !error) {
+
+    if (error) {
+      console.warn("Supabase Auth sign-in error:", error.message);
+    } else if (data?.user) {
       const userObj = {
         id: data.user.id,
         email: data.user.email,
@@ -184,10 +210,10 @@ export async function authenticateUser(email, password) {
       return userObj;
     }
   } catch (e) {
-    // Supabase sign in error or offline fallback, continue to local accounts
+    console.warn("Supabase connection offline or unconfigured, falling back to local credentials.", e);
   }
 
-  // 2. Check local system accounts (custom created + demo users if enabled)
+  // 2. Fall back to local system accounts (custom created + demo users if enabled)
   const allUsers = getAllSystemUsers();
   const user = allUsers.find(u => u.email.toLowerCase() === normalizedEmail);
   if (!user) {
@@ -198,7 +224,6 @@ export async function authenticateUser(email, password) {
     throw new Error("This user account has been suspended by the Chief Administrator.");
   }
 
-  // Password check (for custom users check password, for demo users allow default)
   if (!user.is_demo && user.password && user.password !== password) {
     throw new Error("Incorrect password. Please verify your credentials.");
   }
@@ -211,9 +236,10 @@ export function getCurrentUser() {
   if (stored) {
     try {
       return JSON.parse(stored);
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error parsing current user:", e);
+    }
   }
-  // Default logged-in user for quick seamless exploration: Administrator
   return DEMO_USERS.administrator;
 }
 
@@ -229,11 +255,13 @@ export function switchRole(roleKey) {
   }
 }
 
-export function logout() {
+export async function logout() {
   localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_USER);
   try {
-    supabase.auth.signOut();
-  } catch (e) {}
+    await supabase.auth.signOut();
+  } catch (e) {
+    console.warn("Error signing out of Supabase Auth:", e);
+  }
   window.location.href = "login.html";
 }
 
@@ -242,7 +270,7 @@ export function enforcePageAccess(allowedRoles = []) {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     window.location.href = "login.html";
-    return;
+    return false;
   }
 
   // Administrators and Principals have master access to everything
