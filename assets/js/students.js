@@ -308,12 +308,15 @@ function openStudentModal(existingStudent = null) {
           passport_photo_url: document.getElementById('std-photo').value || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
           status: 'active'
         };
+if (isEdit) {
+  await dbService.updateStudent(existingStudent.id, newStudentData);
+  showToast('Student record updated successfully!');
+} else {
+  await dbService.addStudent(newStudentData);
+  showToast(`Student ${newStudentData.full_name} admitted successfully!`);
+}
 
-        await dbService.addStudent(newStudentData);
-        showToast(isEdit ? 'Student record updated.' : `Student ${newStudentData.full_name} admitted successfully!`);
-        closeModal();
-        await loadStudents();
-      });
-    }
+closeModal();
+await loadStudents();
   });
 }
