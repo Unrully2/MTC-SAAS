@@ -121,18 +121,22 @@ function openMarksEntryModal() {
 
         const { grade, remarks } = calculateGrade(totalMarks);
 
-        await dbService.addExamResult({
-          student_id: studentId,
-          student_name: studentObj?.full_name || 'Student',
-          unit_code: unitCode,
-          unit_name: unitName,
-          cat_marks: catMarks,
-          exam_marks: examMarks,
-          total_marks: totalMarks,
-          grade: grade,
-          remarks: remarks,
-          semester: "Semester 1"
-        });
+       await dbService.addExamResult({
+  student_id: studentId,
+  student_name: studentObj?.full_name || 'Student',
+  unit_code: unitCode,
+  unit_name: unitName,
+  cat_marks: catMarks,
+  exam_marks: examMarks,
+  total_marks: totalMarks,
+
+  // Add this
+  marks_obtained: totalMarks,
+
+  grade: grade,
+  remarks: remarks,
+  semester: "Semester 1"
+});
 
         showToast(`Result recorded: Total ${totalMarks}% (Grade ${grade})`);
         closeModal();
