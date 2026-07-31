@@ -381,6 +381,71 @@ export const dbService = {
       ...studentData
     };
 
+   async updateStudent(studentId, studentData) {
+  if (isSupabaseConfigured()) {
+    try {
+      const studentKeys = [
+        'admission_no', 'full_name', 'gender', 'dob', 'national_id',
+        'phone', 'email', 'guardian_name', 'guardian_phone', 'emergency_contact',
+        'address', 'county', 'nationality', 'religion', 'medical_conditions',
+        'course_id', 'current_semester', 'academic_year_id', 'intake_id',
+        'status', 'passport_photo_url', 'kcse_grade'
+      ];
+
+      const supabasePayload = cleanPayload(studentData, studentKeys);
+
+      if (supabasePayload.course_id && !isUUID(supabasePayload.course_id)) {
+        delete supabasePayload.course_id;
+      }
+
+      const { data, error } = await supabase
+        .from('students')
+        .update(supabasePayload)
+        .eq('id', studentId)
+        .select();
+
+      if (error) throw error;
+
+      console.log("✅ Student updated successfully:", data);
+
+      const db = getMockDB();
+      const index = db.students.findIndex(s => s.id === studentId);
+      if (index !== -1) {
+        db.students[index] = {
+          ...db.students[index],
+          ...studentData
+        };
+        saveMockDB(db);
+      }
+
+      return data?.[0];
+    } catch (e) {
+      console.error("❌ Supabase update failed:", e);
+
+      if (typeof window !== 'undefined' && window.showToast) {
+        window.showToast(`Update failed: ${e.message}`, 'error');
+      }
+
+      throw e;
+    }
+  }
+
+  const db = getMockDB();
+  const index = db.students.findIndex(s => s.id === studentId);
+
+  if (index !== -1) {
+    db.students[index] = {
+      ...db.students[index],
+      ...studentData
+    };
+
+    saveMockDB(db);
+    return db.students[index];
+  }
+
+  return null;
+}, 
+
     if (isSupabaseConfigured()) {
       try {
         const studentKeys = [
