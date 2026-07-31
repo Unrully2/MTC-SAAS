@@ -13,12 +13,19 @@ let allStudents = [];
 let allCourses = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-  enforcePageAccess();
+  enforcePageAccess(['administrator', 'principal', 'registrar', 'finance_officer']);
   renderSidebar('students');
   renderNavbar('Student Management Portal');
 
-  allCourses = await dbService.getCourses();
-  await loadStudents();
+  setupGlobalEventListeners();
+  setupFilters();
+
+  try {
+    allCourses = await dbService.getCourses();
+    await loadStudents();
+  } catch (err) {
+    showToast(`Failed to initialize portal data: ${err.message}`, 'error');
+  }
 
   // Check query params for quick action e.g. ?action=new
   const urlParams = new URLSearchParams(window.location.search);
@@ -27,16 +34,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-async function loadStudents() {
-  allStudents = await dbService.getStudents();
-  renderStudentTable(allStudents);
-  setupFilters();
-
+function setupGlobalEventListeners() {
   document.getElementById('add-student-btn')?.addEventListener('click', () => {
     openStudentModal();
   });
 
   document.getElementById('export-students-btn')?.addEventListener('click', () => {
+    if (!allStudents.length) {
+      showToast('No student records available to export.', 'info');
+      return;
+    }
+
     exportToCSV('Mercylife_Students_Roster.csv', allStudents.map(s => ({
       AdmissionNo: s.admission_no,
       Name: s.full_name,
@@ -48,8 +56,17 @@ async function loadStudents() {
       County: s.county,
       Status: s.status
     })));
-    showToast('Student roster exported to CSV file.');
+    showToast('Student roster exported to CSV file.', 'success');
   });
+}
+
+async function loadStudents() {
+  try {
+    allStudents = await dbService.getStudents();
+    renderStudentTable(allStudents);
+  } catch (err) {
+    showToast(`Error loading students: ${err.message}`, 'error');
+  }
 }
 
 function renderStudentTable(students) {
@@ -61,44 +78,48 @@ function renderStudentTable(students) {
     return;
   }
 
-  tbody.innerHTML = students.map(s => `
-    <tr>
-      <td><strong>${s.admission_no}</strong></td>
-      <td>
-        <div style="display:flex; align-items:center; gap:0.75rem;">
-          <img src="${s.passport_photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" class="student-photo-thumbnail" />
-          <div>
-            <div style="font-weight:700;">${s.full_name}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">${s.email}</div>
+  tbody.innerHTML = students.map(s => {
+    const photoUrl = sanitizeUrl(s.passport_photo_url, 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100');
+    
+    return `
+      <tr>
+        <td><strong>${escapeHtml(s.admission_no)}</strong></td>
+        <td>
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <img src="${photoUrl}" class="student-photo-thumbnail" alt="${escapeHtml(s.full_name)}" />
+            <div>
+              <div style="font-weight:700;">${escapeHtml(s.full_name)}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(s.email || '')}</div>
+            </div>
           </div>
-        </div>
-      </td>
-      <td>${s.course_name || 'Medical Program'}</td>
-      <td>${s.current_semester || 'Semester 1'}</td>
-      <td>${s.county || 'Nairobi'}</td>
-      <td>${getStatusBadge(s.status || 'active')}</td>
-      <td>
-        <div style="display:flex; gap:0.35rem;">
-          <button class="btn btn-sm btn-secondary view-btn" data-id="${s.id}">👁️ View</button>
-          <button class="btn btn-sm btn-outline edit-btn" data-id="${s.id}">✏️ Edit</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+        </td>
+        <td>${escapeHtml(s.course_name || 'Medical Program')}</td>
+        <td>${escapeHtml(s.current_semester || 'Semester 1')}</td>
+        <td>${escapeHtml(s.county || 'Kiambu')}</td>
+        <td>${getStatusBadge(s.status || 'active')}</td>
+        <td>
+          <div style="display:flex; gap:0.35rem;">
+            <button class="btn btn-sm btn-secondary view-btn" data-id="${s.id}">👁️ View</button>
+            <button class="btn btn-sm btn-outline edit-btn" data-id="${s.id}">✏️ Edit</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
 
-  // Attach event handlers
-  document.querySelectorAll('.view-btn').forEach(btn => {
+  // Attach event handlers safely
+  tbody.querySelectorAll('.view-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = e.currentTarget.getAttribute('data-id');
-      const student = allStudents.find(s => s.id === id);
+      const student = allStudents.find(s => String(s.id) === String(id));
       if (student) viewStudentDetails(student);
     });
   });
 
-  document.querySelectorAll('.edit-btn').forEach(btn => {
+  tbody.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = e.currentTarget.getAttribute('data-id');
-      const student = allStudents.find(s => s.id === id);
+      const student = allStudents.find(s => String(s.id) === String(id));
       if (student) openStudentModal(student);
     });
   });
@@ -110,15 +131,17 @@ function setupFilters() {
   const statusFilter = document.getElementById('filter-status');
 
   const filterHandler = () => {
-    const query = (searchInput?.value || '').toLowerCase();
+    const query = (searchInput?.value || '').trim().toLowerCase();
     const course = courseFilter?.value || '';
     const status = statusFilter?.value || '';
 
     const filtered = allStudents.filter(s => {
-      const matchesQuery = s.full_name.toLowerCase().includes(query) ||
-                           s.admission_no.toLowerCase().includes(query) ||
-                           (s.national_id && s.national_id.includes(query));
-      const matchesCourse = !course || s.course_id === course;
+      const matchesQuery = !query ||
+        (s.full_name && s.full_name.toLowerCase().includes(query)) ||
+        (s.admission_no && s.admission_no.toLowerCase().includes(query)) ||
+        (s.national_id && String(s.national_id).toLowerCase().includes(query));
+
+      const matchesCourse = !course || String(s.course_id) === String(course);
       const matchesStatus = !status || s.status === status;
 
       return matchesQuery && matchesCourse && matchesStatus;
@@ -133,15 +156,17 @@ function setupFilters() {
 }
 
 function viewStudentDetails(student) {
+  const photoUrl = sanitizeUrl(student.passport_photo_url, 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
+
   createModal({
-    title: `Student File: ${student.full_name}`,
+    title: `Student File: ${escapeHtml(student.full_name)}`,
     bodyHTML: `
       <div class="student-detail-header">
-        <img src="${student.passport_photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}" class="student-detail-avatar" />
+        <img src="${photoUrl}" class="student-detail-avatar" alt="Student Photo" />
         <div>
-          <h2 style="font-size:1.25rem; font-weight:800; margin:0;">${student.full_name}</h2>
-          <div style="color:var(--color-primary); font-weight:700; font-size:0.9rem;">Adm No: ${student.admission_no}</div>
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">${student.course_name}</div>
+          <h2 style="font-size:1.25rem; font-weight:800; margin:0;">${escapeHtml(student.full_name)}</h2>
+          <div style="color:var(--color-primary); font-weight:700; font-size:0.9rem;">Adm No: ${escapeHtml(student.admission_no)}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">${escapeHtml(student.course_name || 'N/A')}</div>
           <div style="margin-top:0.4rem;">${getStatusBadge(student.status)}</div>
         </div>
       </div>
@@ -149,31 +174,31 @@ function viewStudentDetails(student) {
       <div class="detail-grid">
         <div class="detail-item">
           <span class="detail-label">Gender / DOB</span>
-          <span class="detail-value">${student.gender} • ${student.dob || 'N/A'}</span>
+          <span class="detail-value">${escapeHtml(student.gender || 'N/A')} • ${escapeHtml(student.dob || 'N/A')}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">National ID</span>
-          <span class="detail-value">${student.national_id || 'N/A'}</span>
+          <span class="detail-value">${escapeHtml(student.national_id || 'N/A')}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">Phone & Email</span>
-          <span class="detail-value">${student.phone}<br/>${student.email}</span>
+          <span class="detail-value">${escapeHtml(student.phone || 'N/A')}<br/>${escapeHtml(student.email || 'N/A')}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">County / Nationality</span>
-          <span class="detail-value">${student.county} (${student.nationality})</span>
+          <span class="detail-value">${escapeHtml(student.county || 'Kiambu')} (${escapeHtml(student.nationality || 'Kenyan')})</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">Guardian Contact</span>
-          <span class="detail-value">${student.guardian_name || 'N/A'} (${student.guardian_phone || 'N/A'})</span>
+          <span class="detail-value">${escapeHtml(student.guardian_name || 'N/A')} (${escapeHtml(student.guardian_phone || 'N/A')})</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">KCSE Entry Grade</span>
-          <span class="detail-value">${student.kcse_grade || 'C Plain'}</span>
+          <span class="detail-value">${escapeHtml(student.kcse_grade || 'C Plain')}</span>
         </div>
         <div class="detail-item" style="grid-column: span 2;">
           <span class="detail-label">Medical History / Allergies</span>
-          <span class="detail-value">${student.medical_conditions || 'None Reported'}</span>
+          <span class="detail-value">${escapeHtml(student.medical_conditions || 'None Reported')}</span>
         </div>
       </div>
 
@@ -194,12 +219,12 @@ function viewStudentDetails(student) {
       document.getElementById('print-student-profile-btn')?.addEventListener('click', () => {
         printDocument(`Student Profile - ${student.full_name} (${student.admission_no})`, `
           <h3>Personal Details</h3>
-          <p><strong>Full Name:</strong> ${student.full_name}</p>
-          <p><strong>Admission Number:</strong> ${student.admission_no}</p>
-          <p><strong>Course:</strong> ${student.course_name}</p>
-          <p><strong>National ID:</strong> ${student.national_id}</p>
-          <p><strong>County of Residence:</strong> ${student.county}</p>
-          <p><strong>Parent / Guardian:</strong> ${student.guardian_name} (${student.guardian_phone})</p>
+          <p><strong>Full Name:</strong> ${escapeHtml(student.full_name)}</p>
+          <p><strong>Admission Number:</strong> ${escapeHtml(student.admission_no)}</p>
+          <p><strong>Course:</strong> ${escapeHtml(student.course_name || 'N/A')}</p>
+          <p><strong>National ID:</strong> ${escapeHtml(student.national_id || 'N/A')}</p>
+          <p><strong>County of Residence:</strong> ${escapeHtml(student.county || 'N/A')}</p>
+          <p><strong>Parent / Guardian:</strong> ${escapeHtml(student.guardian_name || 'N/A')} (${escapeHtml(student.guardian_phone || 'N/A')})</p>
         `);
       });
 
@@ -214,18 +239,19 @@ function viewStudentDetails(student) {
 
 function openStudentModal(existingStudent = null) {
   const isEdit = !!existingStudent;
+
   createModal({
-    title: isEdit ? `Edit Student: ${existingStudent.admission_no}` : `➕ Admit New Student`,
+    title: isEdit ? `Edit Student: ${escapeHtml(existingStudent.admission_no)}` : `➕ Admit New Student`,
     bodyHTML: `
       <form id="student-form">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
           <div class="form-group">
             <label class="form-label">Full Name *</label>
-            <input type="text" class="form-control" id="std-fullname" value="${existingStudent?.full_name || ''}" required placeholder="e.g. Mary Wanjiku Kinuthia" />
+            <input type="text" class="form-control" id="std-fullname" value="${escapeHtml(existingStudent?.full_name || '')}" required placeholder="e.g. Mary Wanjiku Kinuthia" />
           </div>
           <div class="form-group">
             <label class="form-label">Admission Number</label>
-            <input type="text" class="form-control" id="std-admno" value="${existingStudent?.admission_no || ''}" placeholder="Auto-generated if empty" />
+            <input type="text" class="form-control" id="std-admno" value="${escapeHtml(existingStudent?.admission_no || '')}" placeholder="Auto-generated if empty" />
           </div>
           <div class="form-group">
             <label class="form-label">Gender *</label>
@@ -236,43 +262,44 @@ function openStudentModal(existingStudent = null) {
           </div>
           <div class="form-group">
             <label class="form-label">National ID Number *</label>
-            <input type="text" class="form-control" id="std-idno" value="${existingStudent?.national_id || ''}" required placeholder="e.g. 38192049" />
+            <input type="text" class="form-control" id="std-idno" value="${escapeHtml(existingStudent?.national_id || '')}" required placeholder="e.g. 38192049" />
           </div>
           <div class="form-group">
             <label class="form-label">Phone Number *</label>
-            <input type="text" class="form-control" id="std-phone" value="${existingStudent?.phone || ''}" required placeholder="+254 7..." />
+            <input type="tel" class="form-control" id="std-phone" value="${escapeHtml(existingStudent?.phone || '')}" required placeholder="+254 7..." />
           </div>
           <div class="form-group">
             <label class="form-label">Email Address *</label>
-            <input type="email" class="form-control" id="std-email" value="${existingStudent?.email || ''}" required placeholder="student@mercylifecollege.ac.ke" />
+            <input type="email" class="form-control" id="std-email" value="${escapeHtml(existingStudent?.email || '')}" required placeholder="student@mercylifecollege.ac.ke" />
           </div>
           <div class="form-group">
             <label class="form-label">Course / Program *</label>
             <select class="form-control" id="std-course" required>
+              <option value="" disabled ${!existingStudent ? 'selected' : ''}>-- Select Course --</option>
               ${allCourses.map(c => `
-                <option value="${c.id}" ${existingStudent?.course_id === c.id ? 'selected' : ''}>${c.code} - ${c.name}</option>
+                <option value="${c.id}" ${existingStudent?.course_id === c.id ? 'selected' : ''}>${escapeHtml(c.code)} - ${escapeHtml(c.name)}</option>
               `).join('')}
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">County *</label>
-            <input type="text" class="form-control" id="std-county" value="${existingStudent?.county || 'Kiambu'}" required placeholder="e.g. Kiambu, Nairobi" />
+            <input type="text" class="form-control" id="std-county" value="${escapeHtml(existingStudent?.county || 'Kiambu')}" required placeholder="e.g. Kiambu, Nairobi" />
           </div>
           <div class="form-group">
             <label class="form-label">Guardian / Parent Name</label>
-            <input type="text" class="form-control" id="std-guardian" value="${existingStudent?.guardian_name || ''}" placeholder="Parent Name" />
+            <input type="text" class="form-control" id="std-guardian" value="${escapeHtml(existingStudent?.guardian_name || '')}" placeholder="Parent Name" />
           </div>
           <div class="form-group">
             <label class="form-label">Guardian Phone</label>
-            <input type="text" class="form-control" id="std-guardianphone" value="${existingStudent?.guardian_phone || ''}" placeholder="+254 7..." />
+            <input type="tel" class="form-control" id="std-guardianphone" value="${escapeHtml(existingStudent?.guardian_phone || '')}" placeholder="+254 7..." />
           </div>
           <div class="form-group">
             <label class="form-label">KCSE Mean Grade</label>
-            <input type="text" class="form-control" id="std-kcse" value="${existingStudent?.kcse_grade || 'C Plain'}" placeholder="e.g. C+" />
+            <input type="text" class="form-control" id="std-kcse" value="${escapeHtml(existingStudent?.kcse_grade || 'C Plain')}" placeholder="e.g. C+" />
           </div>
           <div class="form-group">
             <label class="form-label">Passport Photo URL</label>
-            <input type="text" class="form-control" id="std-photo" value="${existingStudent?.passport_photo_url || ''}" placeholder="Image Link" />
+            <input type="url" class="form-control" id="std-photo" value="${escapeHtml(existingStudent?.passport_photo_url || '')}" placeholder="https://..." />
           </div>
         </div>
       </form>
@@ -283,40 +310,78 @@ function openStudentModal(existingStudent = null) {
     `,
     onOpen: (closeModal) => {
       document.getElementById('cancel-std-form')?.addEventListener('click', closeModal);
-      document.getElementById('save-std-form')?.addEventListener('click', async () => {
+
+      const saveBtn = document.getElementById('save-std-form');
+      saveBtn?.addEventListener('click', async () => {
         const form = document.getElementById('student-form');
         if (!form.checkValidity()) {
           form.reportValidity();
           return;
         }
 
-        const selectedCourse = allCourses.find(c => c.id === document.getElementById('std-course').value);
+        const selectedCourseId = document.getElementById('std-course').value;
+        const selectedCourse = allCourses.find(c => String(c.id) === String(selectedCourseId));
 
         const newStudentData = {
-          full_name: document.getElementById('std-fullname').value,
-          admission_no: document.getElementById('std-admno').value || `MTC/2026/0${Math.floor(100 + Math.random() * 900)}`,
+          full_name: document.getElementById('std-fullname').value.trim(),
+          admission_no: document.getElementById('std-admno').value.trim() || `MTC/${new Date().getFullYear()}/0${Math.floor(100 + Math.random() * 900)}`,
           gender: document.getElementById('std-gender').value,
-          national_id: document.getElementById('std-idno').value,
-          phone: document.getElementById('std-phone').value,
-          email: document.getElementById('std-email').value,
-          course_id: selectedCourse?.id,
-          course_name: selectedCourse?.name,
-          county: document.getElementById('std-county').value,
-          guardian_name: document.getElementById('std-guardian').value,
-          guardian_phone: document.getElementById('std-guardianphone').value,
-          kcse_grade: document.getElementById('std-kcse').value,
-          passport_photo_url: document.getElementById('std-photo').value || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-          status: 'active'
+          national_id: document.getElementById('std-idno').value.trim(),
+          phone: document.getElementById('std-phone').value.trim(),
+          email: document.getElementById('std-email').value.trim(),
+          course_id: selectedCourseId,
+          course_name: selectedCourse?.name || '',
+          county: document.getElementById('std-county').value.trim(),
+          guardian_name: document.getElementById('std-guardian').value.trim(),
+          guardian_phone: document.getElementById('std-guardianphone').value.trim(),
+          kcse_grade: document.getElementById('std-kcse').value.trim(),
+          passport_photo_url: document.getElementById('std-photo').value.trim() || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          status: existingStudent?.status || 'active'
         };
-if (isEdit) {
-  await dbService.updateStudent(existingStudent.id, newStudentData);
-  showToast('Student record updated successfully!');
-} else {
-  await dbService.addStudent(newStudentData);
-  showToast(`Student ${newStudentData.full_name} admitted successfully!`);
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+          if (isEdit) {
+            await dbService.updateStudent(existingStudent.id, newStudentData);
+            showToast('Student record updated successfully!', 'success');
+          } else {
+            await dbService.addStudent(newStudentData);
+            showToast(`Student ${newStudentData.full_name} admitted successfully!`, 'success');
+          }
+
+          closeModal();
+          await loadStudents();
+        } catch (err) {
+          showToast(`Failed to save student record: ${err.message}`, 'error');
+          saveBtn.disabled = false;
+          saveBtn.textContent = isEdit ? '💾 Update Record' : '✅ Submit Admission';
+        }
+      });
+    }
+  });
 }
 
-closeModal();
-await loadStudents();
-  });
+// Helpers
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function sanitizeUrl(url, fallback) {
+  if (!url) return fallback;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return escapeHtml(url);
+    }
+  } catch (e) {
+    // Invalid URL structure
+  }
+  return fallback;
 }
