@@ -1,11 +1,39 @@
 {
+  "name": "mtc-saas-v1",
+  "version": "1.0.0",
+  "description": "Mercylife Training College - Production-Ready ERP System",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install",
   "env": {
-    "VITE_SUPABASE_URL": "@supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "VITE_API_BASE_URL": "@api_base_url"
+    "VITE_SUPABASE_URL": {
+      "value": "@supabase_url",
+      "description": "Your Supabase project URL"
+    },
+    "VITE_SUPABASE_ANON_KEY": {
+      "value": "@supabase_anon_key",
+      "description": "Your Supabase anonymous key"
+    },
+    "VITE_API_BASE_URL": {
+      "value": "@api_base_url",
+      "description": "API base URL for backend calls"
+    },
+    "VITE_DEMO_USERS_ENABLED": {
+      "value": "false",
+      "description": "Disable demo accounts in production"
+    },
+    "VITE_APP_ENV": {
+      "value": "production",
+      "description": "Application environment"
+    }
+  },
+  "regions": [
+    "sfo1"
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 30
+    }
   }
 }
