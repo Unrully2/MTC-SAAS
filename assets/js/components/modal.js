@@ -1,44 +1,105 @@
-// =========================================================
-// UNIVERSAL MODAL COMPONENT (VANILLA JS MODULE)
-// =========================================================
-
-export function createModal({ title, bodyHTML, footerHTML, onOpen }) {
-  let modalOverlay = document.getElementById('global-modal-overlay');
-
-  if (!modalOverlay) {
-    modalOverlay = document.createElement('div');
-    modalOverlay.id = 'global-modal-overlay';
-    modalOverlay.className = 'modal-overlay';
-    document.body.appendChild(modalOverlay);
-  }
-
-  modalOverlay.innerHTML = `
-    <div class="modal-container">
-      <div class="modal-header">
-        <h3 class="card-title" style="margin:0;">${title}</h3>
-        <button class="modal-close-btn" id="modal-close-x">&times;</button>
-      </div>
-      <div class="modal-body">
-        ${bodyHTML}
-      </div>
-      ${footerHTML ? `<div class="modal-footer">${footerHTML}</div>` : ''}
-    </div>
+/**
+ * Simple Modal Component
+ */
+export function createModal({
+  title = '',
+  bodyHTML = '',
+  footerHTML = '',
+  onOpen = null,
+  onClose = null,
+} = {}) {
+  // Create modal backdrop
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
   `;
 
+  // Create modal content
+  const modal = document.createElement('div');
+  modal.className = 'modal-content';
+  modal.style.cssText = `
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 1001;
+  `;
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = `
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  `;
+
+  const titleEl = document.createElement('h3');
+  titleEl.textContent = title;
+  titleEl.style.cssText = 'margin: 0; color: var(--text-main);';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '&times;';
+  closeBtn.style.cssText = `
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+  `;
+
+  header.appendChild(titleEl);
+  header.appendChild(closeBtn);
+
+  // Body
+  const body = document.createElement('div');
+  body.style.cssText = 'padding: 1.5rem;';
+  body.innerHTML = bodyHTML;
+
+  // Footer
+  const footer = document.createElement('div');
+  footer.style.cssText = `
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  `;
+  footer.innerHTML = footerHTML;
+
+  modal.appendChild(header);
+  modal.appendChild(body);
+  if (footerHTML) modal.appendChild(footer);
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+
+  // Close function
   const closeModal = () => {
-    modalOverlay.classList.remove('open');
+    backdrop.remove();
+    if (onClose) onClose();
   };
 
-  document.getElementById('modal-close-x')?.addEventListener('click', closeModal);
-  modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) closeModal();
+  closeBtn.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeModal();
   });
 
-  modalOverlay.classList.add('open');
+  if (onOpen) onOpen(closeModal);
 
-  if (typeof onOpen === 'function') {
-    onOpen(closeModal);
-  }
-
-  return { closeModal };
+  return { modal, backdrop, closeModal };
 }

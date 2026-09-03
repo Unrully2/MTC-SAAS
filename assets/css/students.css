@@ -1,50 +1,30 @@
-/* Student Management Styles */
+/* Students module specific styles */
 
-.student-photo-thumbnail {
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  border: 2px solid var(--color-primary-light);
-}
-
-.student-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  padding-bottom: 1.25rem;
-  margin-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.student-detail-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-lg);
-  object-fit: cover;
-  border: 3px solid var(--color-primary);
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-label {
+.student-status {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-muted);
   text-transform: uppercase;
 }
 
-.detail-value {
-  font-size: 0.925rem;
-  font-weight: 600;
-  color: var(--text-main);
+.student-status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.student-status.inactive {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.student-status.suspended {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.student-status.graduated {
+  background: #c7d2fe;
+  color: #312e81;
 }
