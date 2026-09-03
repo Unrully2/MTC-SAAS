@@ -262,3 +262,119 @@ export function requireAnyRole(roles) {
   }
   return true;
 }
+
+/**
+ * Alias for logoutUser (used by navbar)
+ */
+export async function logout() {
+  try {
+    await logoutUser();
+    window.location.href = 'login.html';
+  } catch (error) {
+    console.error('Logout failed:', error);
+    // Force clear and redirect anyway
+    currentUser = null;
+    sessionStorage.removeItem('currentUser');
+    window.location.href = 'login.html';
+  }
+}
+
+/**
+ * Quick role switcher for demo/testing (uses DEMO_USERS)
+ */
+export function switchRole(roleKey) {
+  if (isDemoUsersDisabled()) {
+    alert('Demo role switching is disabled in production mode.');
+    return;
+  }
+  const demoUser = DEMO_USERS[roleKey];
+  if (!demoUser) {
+    console.warn('Unknown role key:', roleKey);
+    return;
+  }
+  setCurrentUser({ ...demoUser });
+  // Reload current page so all components pick up the new user
+  window.location.reload();
+}
+
+/**
+ * Enforce page access. If roles array is provided, user must have one of those roles.
+ * Otherwise just requires authentication.
+ */
+export function enforcePageAccess(allowedRoles = null) {
+  if (!isLoggedIn()) {
+    window.location.href = 'login.html';
+    return false;
+  }
+  if (allowedRoles && Array.isArray(allowedRoles) && allowedRoles.length > 0) {
+    if (!hasAnyRole(allowedRoles)) {
+      alert('Access Denied: You do not have permission to view this page.');
+      window.location.href = 'dashboard.html';
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Alias for isDemoUsersDisabled / toggle for settings page
+ */
+export function setDemoUsersDisabled(disabled) {
+  toggleDemoUsers(disabled);
+}
+
+/**
+ * Get custom (non-demo) users from localStorage or session
+ * (lightweight fallback until full Supabase admin listing is wired)
+ */
+export function getCustomUsers() {
+  try {
+    const stored = localStorage.getItem('CUSTOM_USERS');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Combine demo + custom users for admin UI
+ */
+export function getAllSystemUsers() {
+  const demoList = Object.values(DEMO_USERS).map(u => ({
+    ...u,
+    status: 'active',
+    isDemo: true,
+  }));
+  const custom = getCustomUsers().map(u => ({ ...u, isDemo: false }));
+  return [...demoList, ...custom];
+}
+
+/**
+ * Update a user account (local/custom users for now)
+ */
+export function updateUserAccount(id, updates) {
+  const custom = getCustomUsers();
+  const idx = custom.findIndex(u => u.id === id);
+  if (idx !== -1) {
+    custom[idx] = { ...custom[idx], ...updates };
+    localStorage.setItem('CUSTOM_USERS', JSON.stringify(custom));
+    return { success: true };
+  }
+  // Demo users are read-only
+  console.warn('Cannot update demo user or unknown id:', id);
+  return { success: false, error: 'User not found or is a demo account' };
+}
+
+/**
+ * Delete a custom user account
+ */
+export function deleteUserAccount(id) {
+  let custom = getCustomUsers();
+  const before = custom.length;
+  custom = custom.filter(u => u.id !== id);
+  if (custom.length === before) {
+    return { success: false, error: 'User not found or is a demo account' };
+  }
+  localStorage.setItem('CUSTOM_USERS', JSON.stringify(custom));
+  return { success: true };
+}
